@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Промт</title>
+    <script src="https://st.max.ru/js/max-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        .prompt-box {
+            background: #f8f8f8;
+            border-radius: 12px;
+            padding: 16px;
+            min-height: 100px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+        .prompt-box.loading {
+            color: #999;
+            font-style: italic;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary {
+            background: #007aff;
+            color: white;
+        }
+        .btn-primary:active { background: #0066d9; }
+        .btn-secondary {
+            background: #e8e8e8;
+            color: #333;
+        }
+        .btn-secondary:active { background: #d5d5d5; }
+        .btn-success {
+            background: #34c759;
+            color: white;
+        }
+        .btn-success:active { background: #2db84e; }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; }
+        .footer {
+            margin-top: 16px;
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h2>📋 Промт для генерации</h2>
+        </div>
+        <div class="prompt-box loading" id="promptDisplay">Загрузка промта...</div>
+        <div class="btn-group">
+            <button class="btn btn-primary" id="copyBtn">📋 Скопировать</button>
+            <button class="btn btn-secondary" id="generateBtn">🤖 Сгенерировать</button>
+        </div>
+        <div class="footer">Нажмите «Скопировать», чтобы использовать промт</div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        (function() {
+            const promptDisplay = document.getElementById('promptDisplay');
+            const copyBtn = document.getElementById('copyBtn');
+            const generateBtn = document.getElementById('generateBtn');
+            const toast = document.getElementById('toast');
+
+            let promptText = '';
+
+            // --- 1. Получаем промт из start_param ---
+            try {
+                const initData = window.WebApp?.initDataUnsafe;
+                if (initData && initData.start_param) {
+                    promptText = decodeURIComponent(initData.start_param);
+                }
+            } catch (e) {
+                console.warn('Не удалось получить start_param:', e);
+            }
+
+            // Если промт не получен — показываем заглушку
+            if (!promptText || promptText.trim() === '') {
+                promptDisplay.textContent = 'Промт не найден 😕';
+                promptDisplay.classList.remove('loading');
+                copyBtn.disabled = true;
+                copyBtn.style.opacity = '0.5';
+                copyBtn.style.cursor = 'default';
+            } else {
+                promptDisplay.textContent = promptText;
+                promptDisplay.classList.remove('loading');
+            }
+
+            // --- 2. Копирование в буфер обмена ---
+            function showToast(message) {
+                toast.textContent = message;
+                toast.classList.add('show');
+                clearTimeout(toast._hideTimer);
+                toast._hideTimer = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 2000);
+            }
+
+            function copyPrompt() {
+                if (!promptText) return;
+
+                // Пробуем метод MAX Bridge
+                if (window.WebApp && typeof window.WebApp.copyToClipboard === 'function') {
+                    try {
+                        window.WebApp.copyToClipboard(promptText);
+                        showToast('✅ Промт скопирован!');
+                        return;
+                    } catch (e) {
+                        console.warn('WebApp.copyToClipboard не сработал, пробуем fallback');
+                    }
+                }
+
+                // Fallback: clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(promptText)
+                        .then(() => showToast('✅ Промт скопирован!'))
+                        .catch(() => fallbackCopy());
+                } else {
+                    fallbackCopy();
+                }
+            }
+
+            function fallbackCopy() {
+                const textarea = document.createElement('textarea');
+                textarea.value = promptText;
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                textarea.style.top = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('✅ Промт скопирован!');
+                } catch (e) {
+                    showToast('❌ Не удалось скопировать');
+                }
+                document.body.removeChild(textarea);
+            }
+
+            copyBtn.addEventListener('click', copyPrompt);
+
+            // --- 3. Переход в бота для генерации ---
+            function generateInBot() {
+                if (!promptText) {
+                    showToast('❌ Нет промта для генерации');
+                    return;
+                }
+
+                // ⚠️ ЗАМЕНИ «твой_бот» на реальный username твоего бота в MAX
+                const botName = 'твой_бот';
+                const encodedPrompt = encodeURIComponent(promptText);
+                // Ограничиваем длину payload для startapp (максимум 512 символов)
+                const maxPayloadLength = 500;
+                let payload = `generate_${encodedPrompt}`;
+                if (payload.length > maxPayloadLength) {
+                    // Если слишком длинный — обрезаем
+                    payload = payload.substring(0, maxPayloadLength);
+                }
+                const url = `https://max.ru/${botName}?startapp=${payload}`;
+
+                // Пробуем открыть через MAX Bridge
+                if (window.WebApp && typeof window.WebApp.openMaxLink === 'function') {
+                    try {
+                        window.WebApp.openMaxLink(url);
+                        return;
+                    } catch (e) {
+                        console.warn('WebApp.openMaxLink не сработал, пробуем window.open');
+                    }
+                }
+
+                // Fallback
+                window.open(url, '_blank');
+            }
+
+            generateBtn.addEventListener('click', generateInBot);
+
+            // --- 4. Дополнительно: обработка кнопки «Назад» в MAX ---
+            if (window.WebApp && window.WebApp.BackButton) {
+                window.WebApp.BackButton.show();
+                window.WebApp.BackButton.onClick(function() {
+                    if (window.WebApp && window.WebApp.close) {
+                        window.WebApp.close();
+                    } else {
+                        window.history.back();
+                    }
+                });
+            }
+
+            console.log('✅ Мини-приложение загружено');
+            console.log('Промт:', promptText ? 'получен' : 'не найден');
+        })();
+    </script>
+
+</body>
+</html>
