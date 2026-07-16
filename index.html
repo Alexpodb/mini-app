@@ -82,11 +82,6 @@
             color: #333;
         }
         .btn-secondary:active { background: #d5d5d5; }
-        .btn-success {
-            background: #34c759;
-            color: white;
-        }
-        .btn-success:active { background: #2db84e; }
         .toast {
             position: fixed;
             bottom: 30px;
@@ -107,6 +102,9 @@
             font-size: 12px;
             color: #999;
             text-align: center;
+        }
+        .error {
+            color: #d32f2f;
         }
     </style>
 </head>
@@ -134,30 +132,55 @@
             const toast = document.getElementById('toast');
 
             let promptText = '';
+            let promptId = '';
 
-            // --- 1. Получаем промт из start_param ---
+            // --- 1. Получаем ID промта из start_param ---
             try {
                 const initData = window.WebApp?.initDataUnsafe;
                 if (initData && initData.start_param) {
-                    promptText = decodeURIComponent(initData.start_param);
+                    promptId = decodeURIComponent(initData.start_param);
                 }
             } catch (e) {
                 console.warn('Не удалось получить start_param:', e);
             }
 
-            // Если промт не получен — показываем заглушку
-            if (!promptText || promptText.trim() === '') {
+            // --- 2. Если ID получен — запрашиваем промт с сервера ---
+            if (promptId && promptId.trim() !== '') {
+                const apiUrl = `https://neiroobuchenie.ru/prompt-api/prompt/${encodeURIComponent(promptId)}`;
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.prompt) {
+                            promptText = data.prompt;
+                            promptDisplay.textContent = promptText;
+                            promptDisplay.classList.remove('loading');
+                        } else {
+                            throw new Error('Промт не найден');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка загрузки промта:', error);
+                        promptDisplay.textContent = '❌ Не удалось загрузить промт. Попробуйте позже.';
+                        promptDisplay.classList.remove('loading');
+                        promptDisplay.classList.add('error');
+                        copyBtn.disabled = true;
+                        copyBtn.style.opacity = '0.5';
+                        copyBtn.style.cursor = 'default';
+                    });
+            } else {
                 promptDisplay.textContent = 'Промт не найден 😕';
                 promptDisplay.classList.remove('loading');
                 copyBtn.disabled = true;
                 copyBtn.style.opacity = '0.5';
                 copyBtn.style.cursor = 'default';
-            } else {
-                promptDisplay.textContent = promptText;
-                promptDisplay.classList.remove('loading');
             }
 
-            // --- 2. Копирование в буфер обмена ---
+            // --- 3. Копирование в буфер обмена ---
             function showToast(message) {
                 toast.textContent = message;
                 toast.classList.add('show');
@@ -169,8 +192,6 @@
 
             function copyPrompt() {
                 if (!promptText) return;
-
-                // Пробуем метод MAX Bridge
                 if (window.WebApp && typeof window.WebApp.copyToClipboard === 'function') {
                     try {
                         window.WebApp.copyToClipboard(promptText);
@@ -180,7 +201,6 @@
                         console.warn('WebApp.copyToClipboard не сработал, пробуем fallback');
                     }
                 }
-
                 // Fallback: clipboard API
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(promptText)
@@ -210,26 +230,23 @@
 
             copyBtn.addEventListener('click', copyPrompt);
 
-            // --- 3. Переход в бота для генерации ---
+            // --- 4. Переход в бота для генерации ---
             function generateInBot() {
                 if (!promptText) {
                     showToast('❌ Нет промта для генерации');
                     return;
                 }
-
-                // ⚠️ ЗАМЕНИ «твой_бот» на реальный username твоего бота в MAX
-                const botName = 'твой_бот';
+                // ⚠️ ЗАМЕНИТЕ НА РЕАЛЬНОЕ ИМЯ БОТА (username)
+                const botName = 'id292301186235_1_bot'; // Укажите правильное имя бота
                 const encodedPrompt = encodeURIComponent(promptText);
                 // Ограничиваем длину payload для startapp (максимум 512 символов)
                 const maxPayloadLength = 500;
                 let payload = `generate_${encodedPrompt}`;
                 if (payload.length > maxPayloadLength) {
-                    // Если слишком длинный — обрезаем
                     payload = payload.substring(0, maxPayloadLength);
                 }
                 const url = `https://max.ru/${botName}?startapp=${payload}`;
 
-                // Пробуем открыть через MAX Bridge
                 if (window.WebApp && typeof window.WebApp.openMaxLink === 'function') {
                     try {
                         window.WebApp.openMaxLink(url);
@@ -238,14 +255,12 @@
                         console.warn('WebApp.openMaxLink не сработал, пробуем window.open');
                     }
                 }
-
-                // Fallback
                 window.open(url, '_blank');
             }
 
             generateBtn.addEventListener('click', generateInBot);
 
-            // --- 4. Дополнительно: обработка кнопки «Назад» в MAX ---
+            // --- 5. Кнопка «Назад» в MAX ---
             if (window.WebApp && window.WebApp.BackButton) {
                 window.WebApp.BackButton.show();
                 window.WebApp.BackButton.onClick(function() {
@@ -258,7 +273,7 @@
             }
 
             console.log('✅ Мини-приложение загружено');
-            console.log('Промт:', promptText ? 'получен' : 'не найден');
+            console.log('ID промта:', promptId || 'не найден');
         })();
     </script>
 
