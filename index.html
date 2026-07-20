@@ -231,32 +231,32 @@
             copyBtn.addEventListener('click', copyPrompt);
 
             // --- 4. Переход в бота для генерации ---
-            function generateInBot() {
-                if (!promptText) {
-                    showToast('❌ Нет промта для генерации');
-                    return;
-                }
-                // ⚠️ ЗАМЕНИТЕ НА РЕАЛЬНОЕ ИМЯ БОТА (username)
-                const botName = 'id292301186235_1_bot'; // Укажите правильное имя бота
-                const encodedPrompt = encodeURIComponent(promptText);
-                // Ограничиваем длину payload для startapp (максимум 512 символов)
-                const maxPayloadLength = 500;
-                let payload = `generate_${encodedPrompt}`;
-                if (payload.length > maxPayloadLength) {
-                    payload = payload.substring(0, maxPayloadLength);
-                }
-                const url = `https://max.ru/${botName}?startapp=${payload}`;
+          function generateInBot() {
+    if (!promptText) {
+        showToast('❌ Нет промта для генерации');
+        return;
+    }
+    const botName = 'id292301186235_1_bot';
+    const encodedPrompt = encodeURIComponent(promptText);
+    // Ограничиваем длину payload (максимум 512 символов)
+    const maxPayloadLength = 500;
+    let payload = `generate_${encodedPrompt}`;
+    if (payload.length > maxPayloadLength) {
+        payload = payload.substring(0, maxPayloadLength);
+    }
+    // ✅ ИЗМЕНЕНО: вместо ?startapp используем ?start
+    const url = `https://max.ru/${botName}?start=${payload}`;
 
-                if (window.WebApp && typeof window.WebApp.openMaxLink === 'function') {
-                    try {
-                        window.WebApp.openMaxLink(url);
-                        return;
-                    } catch (e) {
-                        console.warn('WebApp.openMaxLink не сработал, пробуем window.open');
-                    }
-                }
-                window.open(url, '_blank');
-            }
+    if (window.WebApp && typeof window.WebApp.openMaxLink === 'function') {
+        try {
+            window.WebApp.openMaxLink(url);
+            return;
+        } catch (e) {
+            console.warn('WebApp.openMaxLink не сработал, пробуем window.open');
+        }
+    }
+    window.open(url, '_blank');
+}
 
             generateBtn.addEventListener('click', generateInBot);
 
