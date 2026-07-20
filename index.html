@@ -6,387 +6,355 @@
     <title>Промт</title>
     <script src="https://st.max.ru/js/max-web-app.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #ffffff;
-            color: #1c1c1e;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
         }
-        /* Отладочный блок – будет виден только если что-то пошло не так */
-        #debug {
-            background: #fff3cd;
-            border-bottom: 2px solid #ffc107;
-            padding: 8px 16px;
-            font-size: 13px;
-            color: #856404;
-            font-family: monospace;
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        /* Шапка с аватаркой и именем */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #007aff;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 18px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .user-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        .user-name small {
+            font-weight: 400;
+            font-size: 14px;
+            color: #8e8e93;
+            margin-left: 6px;
+        }
+
+        /* Блок промта */
+        .prompt-box {
+            background: #f8f8f8;
+            border-radius: 12px;
+            padding: 16px;
+            min-height: 100px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #333;
             white-space: pre-wrap;
-            word-break: break-all;
-            display: none; /* скрыт по умолчанию */
+            word-break: break-word;
+            border: 1px solid #eee;
+            margin-bottom: 20px;
         }
-        /* Остальные стили такие же, как у вас (я их сократил для читаемости) */
-        /* ... (полный CSS такой же, как в вашем коде) ... */
-        /* Для краткости я оставлю только изменения, но в полном файле всё есть */
-        .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #ffffff; border-bottom: 1px solid #e9e9eb; }
-        .header-left { display: flex; align-items: center; gap: 12px; }
-        .avatar { width: 36px; height: 36px; border-radius: 50%; background: #e9e9eb; overflow: hidden; flex-shrink: 0; }
-        .avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .user-name { font-weight: 600; font-size: 16px; }
-        .image-container { width: 100%; background: #f2f2f7; position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 4/5; overflow: hidden; }
-        .image-container img { width: 100%; height: 100%; object-fit: cover; }
-        .image-container .placeholder { color: #8e8e93; font-size: 14px; }
-        .nav-arrows { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 8px; pointer-events: none; }
-        .nav-arrows button { pointer-events: auto; background: rgba(255,255,255,0.6); backdrop-filter: blur(4px); border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 22px; color: #1c1c1e; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .nav-arrows button:disabled { opacity: 0.3; pointer-events: none; }
-        .prompt-text { padding: 16px 20px 8px 20px; font-size: 15px; line-height: 1.5; color: #1c1c1e; }
-        .prompt-text .short { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
-        .prompt-text .full { display: none; white-space: pre-wrap; word-break: break-word; }
-        .prompt-text .full.open { display: block; }
-        .prompt-text .more-btn { color: #007aff; font-weight: 500; background: none; border: none; padding: 4px 0; cursor: pointer; font-size: 15px; }
-        .actions { display: flex; align-items: center; padding: 8px 20px 16px 20px; gap: 16px; border-bottom: 1px solid #e9e9eb; }
-        .super-btn { display: flex; align-items: center; gap: 6px; background: none; border: none; font-size: 16px; font-weight: 500; color: #1c1c1e; cursor: pointer; padding: 6px 12px; border-radius: 20px; transition: background 0.2s; }
-        .comments-section { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
-        .comments-section h3 { font-size: 16px; font-weight: 600; color: #1c1c1e; margin-bottom: 4px; }
-        .comments-list { display: flex; flex-direction: column; gap: 12px; max-height: 300px; overflow-y: auto; margin-bottom: 8px; }
-        .comment-item { display: flex; gap: 12px; align-items: flex-start; }
-        .comment-avatar { width: 32px; height: 32px; border-radius: 50%; background: #e9e9eb; overflow: hidden; flex-shrink: 0; }
-        .comment-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .comment-body { flex: 1; background: #f8f8fc; padding: 10px 14px; border-radius: 16px; border-top-left-radius: 4px; }
-        .comment-body .comment-author { font-weight: 600; font-size: 14px; color: #1c1c1e; }
-        .comment-body .comment-text { font-size: 14px; line-height: 1.4; color: #1c1c1e; margin-top: 2px; word-break: break-word; }
-        .comment-body .comment-time { font-size: 11px; color: #8e8e93; margin-top: 4px; }
-        .no-comments { color: #8e8e93; font-size: 14px; text-align: center; padding: 16px 0; }
-        .comment-input-area { display: flex; gap: 10px; align-items: center; background: #f2f2f7; border-radius: 24px; padding: 6px 12px; margin-top: 4px; }
-        .comment-input-area input { flex: 1; border: none; background: transparent; padding: 10px 0; font-size: 15px; outline: none; color: #1c1c1e; }
-        .comment-input-area input::placeholder { color: #8e8e93; }
-        .comment-input-area button { background: #007aff; border: none; color: white; font-weight: 600; padding: 6px 16px; border-radius: 20px; font-size: 14px; cursor: pointer; transition: opacity 0.2s; }
-        .comment-input-area button:disabled { opacity: 0.5; pointer-events: none; }
-        .hidden { display: none !important; }
-        #toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:white; padding:8px 20px; border-radius:10px; font-size:14px; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:999; }
+        .prompt-box.loading {
+            color: #999;
+            font-style: italic;
+        }
+        .prompt-box.error {
+            color: #d32f2f;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .btn {
+            flex: 1;
+            min-width: 120px;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+        }
+        .btn:active {
+            transform: scale(0.97);
+        }
+        .btn-primary {
+            background: #007aff;
+            color: white;
+        }
+        .btn-primary:active {
+            background: #0066d9;
+        }
+        .btn-secondary {
+            background: #e8e8e8;
+            color: #333;
+        }
+        .btn-secondary:active {
+            background: #d5d5d5;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: default;
+            transform: none;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        .footer {
+            margin-top: 16px;
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
 
-    <!-- ОТЛАДОЧНЫЙ БЛОК -->
-    <div id="debug"></div>
-
-    <!-- Шапка -->
-    <div class="header" id="header">
-        <div class="header-left">
-            <div class="avatar" id="avatar"></div>
+    <div class="container">
+        <!-- Шапка с аватаркой и приветствием -->
+        <div class="header">
+            <div class="avatar" id="avatar">👤</div>
             <span class="user-name" id="userName">Загрузка...</span>
         </div>
-    </div>
 
-    <!-- Контейнер для изображения -->
-    <div class="image-container" id="imageContainer">
-        <div class="placeholder">Загрузка изображения...</div>
-        <img id="image" style="display:none;" alt="Промт-картинка" />
-        <div class="nav-arrows" id="navArrows">
-            <button id="prevBtn" disabled>‹</button>
-            <button id="nextBtn" disabled>›</button>
+        <div class="prompt-box loading" id="promptDisplay">Загрузка промта...</div>
+
+        <div class="btn-group">
+            <button class="btn btn-primary" id="copyBtn" disabled>📋 Скопировать</button>
+            <button class="btn btn-secondary" id="generateBtn" disabled>🤖 Сгенерировать</button>
         </div>
+
+        <div class="footer">Нажмите «Скопировать», чтобы использовать промт</div>
     </div>
 
-    <!-- Текст промта -->
-    <div class="prompt-text" id="promptText">
-        <div class="short" id="shortText">Загрузка...</div>
-        <div class="full" id="fullText"></div>
-        <button class="more-btn" id="moreBtn">смотреть еще</button>
-    </div>
-
-    <!-- Кнопка "Супер!" -->
-    <div class="actions">
-        <button class="super-btn" id="superBtn">
-            <span class="icon">⭐️</span>
-            <span>Супер!</span>
-        </button>
-    </div>
-
-    <!-- Комментарии -->
-    <div class="comments-section" id="commentsSection">
-        <h3>Обсудить промт</h3>
-        <div class="comments-list" id="commentsList">
-            <div class="no-comments">Пока нет комментариев. Будьте первым!</div>
-        </div>
-        <div class="comment-input-area">
-            <input type="text" id="commentInput" placeholder="Написать комментарий..." />
-            <button id="sendCommentBtn">Отправить</button>
-        </div>
-    </div>
-
-    <div id="toast"></div>
+    <div class="toast" id="toast"></div>
 
     <script>
         (function() {
-            'use strict';
-
-            // ---- ОТЛАДКА ----
-            const debugEl = document.getElementById('debug');
-            function debug(msg) {
-                debugEl.style.display = 'block';
-                debugEl.textContent += msg + '\n';
-                console.log(msg);
-            }
-            debug('=== ОТЛАДОЧНАЯ ИНФОРМАЦИЯ ===');
-
-            // DOM-элементы
+            const promptDisplay = document.getElementById('promptDisplay');
+            const copyBtn = document.getElementById('copyBtn');
+            const generateBtn = document.getElementById('generateBtn');
+            const toast = document.getElementById('toast');
             const avatarEl = document.getElementById('avatar');
             const userNameEl = document.getElementById('userName');
-            const imageEl = document.getElementById('image');
-            const placeholder = document.querySelector('.placeholder');
-            const shortText = document.getElementById('shortText');
-            const fullText = document.getElementById('fullText');
-            const moreBtn = document.getElementById('moreBtn');
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
-            const superBtn = document.getElementById('superBtn');
-            const commentsList = document.getElementById('commentsList');
-            const commentInput = document.getElementById('commentInput');
-            const sendCommentBtn = document.getElementById('sendCommentBtn');
-            const toast = document.getElementById('toast');
 
-            let currentPromptId = null;
-            let currentPrompt = null;
-            let neighbors = { prevId: null, nextId: null };
-            let isFullTextOpen = false;
+            let promptText = '';
+            let promptId = '';
 
-            function showToast(msg) {
-                toast.textContent = msg;
-                toast.style.opacity = '1';
-                clearTimeout(toast._hideTimer);
-                toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
-            }
-
-            // ---- Инициализация пользователя ----
-            function initUser() {
-                try {
-                    const user = window.WebApp?.initDataUnsafe?.user;
-                    if (user) {
-                        const firstName = user.first_name || 'Друг';
-                        userNameEl.textContent = firstName;
-                        if (user.photo_url) {
-                            avatarEl.innerHTML = `<img src="${user.photo_url}" alt="avatar" />`;
-                        } else {
-                            avatarEl.textContent = firstName.charAt(0).toUpperCase();
-                            avatarEl.style.display = 'flex';
-                            avatarEl.style.alignItems = 'center';
-                            avatarEl.style.justifyContent = 'center';
-                            avatarEl.style.background = '#007aff';
-                            avatarEl.style.color = 'white';
-                            avatarEl.style.fontWeight = '600';
-                        }
+            // --- 1. Персонализация (аватарка и имя) ---
+            try {
+                const user = window.WebApp?.initDataUnsafe?.user;
+                if (user) {
+                    const firstName = user.first_name || 'Друг';
+                    userNameEl.textContent = firstName;
+                    if (user.photo_url) {
+                        avatarEl.innerHTML = `<img src="${user.photo_url}" alt="avatar" />`;
+                        avatarEl.style.background = 'transparent';
                     } else {
-                        userNameEl.textContent = 'Гость';
+                        avatarEl.textContent = firstName.charAt(0).toUpperCase();
+                        avatarEl.style.background = '#007aff';
+                        avatarEl.style.color = 'white';
                     }
-                } catch (e) {
+                } else {
                     userNameEl.textContent = 'Гость';
-                    console.warn('Не удалось получить данные пользователя:', e);
                 }
+            } catch (e) {
+                userNameEl.textContent = 'Гость';
             }
 
-            // ---- Загрузка промта ----
-            function loadPrompt(promptId) {
-                if (!promptId) return;
-                currentPromptId = promptId;
-                placeholder.style.display = 'block';
-                imageEl.style.display = 'none';
-                shortText.textContent = 'Загрузка...';
-                fullText.textContent = '';
-                moreBtn.style.display = 'none';
-                prevBtn.disabled = true;
-                nextBtn.disabled = true;
+            // --- 2. Получаем ID промта из start_param ---
+            try {
+                const initData = window.WebApp?.initDataUnsafe;
+                if (initData && initData.start_param) {
+                    promptId = decodeURIComponent(initData.start_param);
+                }
+            } catch (e) {
+                console.warn('Не удалось получить start_param:', e);
+            }
 
-                debug('🔍 Загружаем промт с ID: ' + promptId);
-                fetch(`https://neiroobuchenie.ru/prompt-api/prompt/${encodeURIComponent(promptId)}`)
-                    .then(res => {
-                        debug('📡 Статус ответа: ' + res.status);
-                        if (!res.ok) throw new Error('HTTP ' + res.status);
-                        return res.json();
+            // Если ID нет в start_param, пробуем взять из URL (для теста в браузере)
+            if (!promptId) {
+                const params = new URLSearchParams(window.location.search);
+                promptId = params.get('startapp') || params.get('start_param');
+            }
+
+            // --- 3. Загружаем промт ---
+            if (promptId && promptId.trim() !== '') {
+                const apiUrl = `https://neiroobuchenie.ru/prompt-api/prompt/${encodeURIComponent(promptId)}`;
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        return response.json();
                     })
                     .then(data => {
-                        debug('📦 Данные получены: ' + JSON.stringify(data).slice(0, 200) + '...');
-                        currentPrompt = data;
-                        // Изображение
-                        if (data.imageUrl) {
-                            imageEl.src = data.imageUrl;
-                            imageEl.style.display = 'block';
-                            placeholder.style.display = 'none';
-                            debug('🖼️ Изображение загружено: ' + data.imageUrl);
+                        if (data.prompt) {
+                            promptText = data.prompt;
+                            promptDisplay.textContent = promptText;
+                            promptDisplay.classList.remove('loading');
+                            copyBtn.disabled = false;
+                            generateBtn.disabled = false;
                         } else {
-                            imageEl.style.display = 'none';
-                            placeholder.style.display = 'block';
-                            placeholder.textContent = 'Изображение отсутствует';
-                            debug('⚠️ imageUrl отсутствует');
+                            throw new Error('Промт не найден');
                         }
-                        // Текст
-                        const promptText = data.prompt || '';
-                        shortText.textContent = promptText;
-                        fullText.textContent = promptText;
-                        shortText.style.webkitLineClamp = '3';
-                        const lineCount = promptText.split('\n').length + Math.ceil(promptText.length / 40);
-                        if (lineCount > 3 || promptText.length > 120) {
-                            moreBtn.style.display = 'inline-block';
-                        } else {
-                            moreBtn.style.display = 'none';
-                        }
-                        isFullTextOpen = false;
-                        fullText.classList.remove('open');
-                        moreBtn.textContent = 'смотреть еще';
-
-                        return loadNeighbors(promptId);
                     })
-                    .then(() => {
-                        updateNavButtons();
-                        loadComments(promptId);
-                    })
-                    .catch(err => {
-                        debug('❌ Ошибка загрузки промта: ' + err.message);
-                        console.error(err);
-                        shortText.textContent = '❌ Не удалось загрузить промт. Попробуйте позже.';
-                        fullText.textContent = '';
-                        moreBtn.style.display = 'none';
-                        showToast('Ошибка загрузки');
+                    .catch(error => {
+                        console.error('Ошибка загрузки промта:', error);
+                        promptDisplay.textContent = '❌ Не удалось загрузить промт. Попробуйте позже.';
+                        promptDisplay.classList.remove('loading');
+                        promptDisplay.classList.add('error');
+                        copyBtn.disabled = true;
+                        generateBtn.disabled = true;
                     });
-            }
-
-            // ---- Соседи ----
-            function loadNeighbors(promptId) {
-                debug('🔗 Загружаем соседей для ' + promptId);
-                return fetch(`https://neiroobuchenie.ru/prompt-api/prompt/${encodeURIComponent(promptId)}/neighbors`)
-                    .then(res => {
-                        if (!res.ok) throw new Error('Ошибка получения соседей');
-                        return res.json();
-                    })
-                    .then(data => {
-                        neighbors = data;
-                        debug('👥 Соседи: prev=' + data.prevId + ', next=' + data.nextId);
-                        updateNavButtons();
-                    })
-                    .catch(err => {
-                        debug('⚠️ Не удалось загрузить соседей: ' + err.message);
-                        neighbors = { prevId: null, nextId: null };
-                        updateNavButtons();
-                    });
-            }
-
-            function updateNavButtons() {
-                prevBtn.disabled = !neighbors.prevId;
-                nextBtn.disabled = !neighbors.nextId;
-            }
-
-            function goTo(direction) {
-                const id = direction === 'next' ? neighbors.nextId : neighbors.prevId;
-                if (id) {
-                    loadPrompt(id);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            }
-
-            function toggleFullText() {
-                isFullTextOpen = !isFullTextOpen;
-                if (isFullTextOpen) {
-                    shortText.style.webkitLineClamp = 'unset';
-                    shortText.style.overflow = 'visible';
-                    fullText.classList.add('open');
-                    moreBtn.textContent = 'свернуть';
-                } else {
-                    shortText.style.webkitLineClamp = '3';
-                    shortText.style.overflow = 'hidden';
-                    fullText.classList.remove('open');
-                    moreBtn.textContent = 'смотреть еще';
-                }
-            }
-
-            function loadComments(promptId) {
-                commentsList.innerHTML = `<div class="no-comments">Комментарии появятся позже</div>`;
-            }
-
-            function sendComment() {
-                const text = commentInput.value.trim();
-                if (!text) { showToast('Введите текст комментария'); return; }
-                showToast('Функция отправки в разработке');
-                commentInput.value = '';
-            }
-
-            function sendSuper() {
-                showToast('⭐ Спасибо!');
-            }
-
-            // ---- Главная инициализация ----
-            function init() {
-                initUser();
-
-                let promptId = null;
-                try {
-                    const initData = window.WebApp?.initDataUnsafe;
-                    debug('📱 WebApp.initDataUnsafe: ' + JSON.stringify(initData, null, 2));
-                    if (initData && initData.start_param) {
-                        promptId = decodeURIComponent(initData.start_param);
-                        debug('✅ start_param получен: ' + promptId);
-                    } else {
-                        debug('❌ start_param отсутствует');
-                    }
-                } catch (e) {
-                    debug('❌ Ошибка при чтении start_param: ' + e.message);
-                }
-
-                // Если ID всё ещё нет, пробуем взять из URL (для теста в браузере)
-                if (!promptId) {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const startapp = urlParams.get('startapp');
-                    if (startapp) {
-                        promptId = startapp;
-                        debug('✅ ID взят из URL (startapp): ' + promptId);
-                    } else {
-                        debug('❌ ID не найден ни в start_param, ни в URL');
-                    }
-                }
-
-                if (promptId && promptId.trim() !== '') {
-                    loadPrompt(promptId.trim());
-                } else {
-                    debug('❌ ID промта отсутствует, показываем заглушку');
-                    shortText.textContent = 'Промт не найден 😕';
-                    imageEl.style.display = 'none';
-                    placeholder.style.display = 'block';
-                    placeholder.textContent = 'Нет данных';
-                    moreBtn.style.display = 'none';
-                }
-
-                // Обработчики
-                prevBtn.addEventListener('click', () => goTo('prev'));
-                nextBtn.addEventListener('click', () => goTo('next'));
-                moreBtn.addEventListener('click', toggleFullText);
-                superBtn.addEventListener('click', sendSuper);
-                sendCommentBtn.addEventListener('click', sendComment);
-                commentInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') sendComment();
-                });
-
-                if (window.WebApp && window.WebApp.BackButton) {
-                    window.WebApp.BackButton.show();
-                    window.WebApp.BackButton.onClick(function() {
-                        if (window.WebApp && window.WebApp.close) {
-                            window.WebApp.close();
-                        } else {
-                            window.history.back();
-                        }
-                    });
-                }
-
-                console.log('✅ Мини-приложение загружено');
-                console.log('ID промта:', promptId || 'не найден');
-            }
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', init);
             } else {
-                init();
+                promptDisplay.textContent = 'Промт не найден 😕';
+                promptDisplay.classList.remove('loading');
+                copyBtn.disabled = true;
+                generateBtn.disabled = true;
             }
+
+            // --- 4. Копирование ---
+            function showToast(message) {
+                toast.textContent = message;
+                toast.classList.add('show');
+                clearTimeout(toast._hideTimer);
+                toast._hideTimer = setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 2000);
+            }
+
+            function copyPrompt() {
+                if (!promptText) return;
+                if (window.WebApp && typeof window.WebApp.copyToClipboard === 'function') {
+                    try {
+                        window.WebApp.copyToClipboard(promptText);
+                        showToast('✅ Промт скопирован!');
+                        return;
+                    } catch (e) {
+                        console.warn('WebApp.copyToClipboard не сработал, пробуем fallback');
+                    }
+                }
+                // Fallback: clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(promptText)
+                        .then(() => showToast('✅ Промт скопирован!'))
+                        .catch(() => fallbackCopy());
+                } else {
+                    fallbackCopy();
+                }
+            }
+
+            function fallbackCopy() {
+                const textarea = document.createElement('textarea');
+                textarea.value = promptText;
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                textarea.style.top = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('✅ Промт скопирован!');
+                } catch (e) {
+                    showToast('❌ Не удалось скопировать');
+                }
+                document.body.removeChild(textarea);
+            }
+
+            copyBtn.addEventListener('click', copyPrompt);
+
+            // --- 5. Генерация (открывает бота) ---
+            function generateInBot() {
+                if (!promptText) {
+                    showToast('❌ Нет промта для генерации');
+                    return;
+                }
+                const botName = 'id292301186235_1_bot';
+                const encodedPrompt = encodeURIComponent(promptText);
+                const maxPayloadLength = 500;
+                let payload = `generate_${encodedPrompt}`;
+                if (payload.length > maxPayloadLength) {
+                    payload = payload.substring(0, maxPayloadLength);
+                }
+                const url = `https://max.ru/${botName}?start=${payload}`;
+
+                if (window.WebApp && typeof window.WebApp.openMaxLink === 'function') {
+                    try {
+                        window.WebApp.openMaxLink(url);
+                        return;
+                    } catch (e) {
+                        console.warn('WebApp.openMaxLink не сработал, пробуем window.open');
+                    }
+                }
+                window.open(url, '_blank');
+            }
+
+            generateBtn.addEventListener('click', generateInBot);
+
+            // --- 6. Кнопка «Назад» в MAX ---
+            if (window.WebApp && window.WebApp.BackButton) {
+                window.WebApp.BackButton.show();
+                window.WebApp.BackButton.onClick(function() {
+                    if (window.WebApp && window.WebApp.close) {
+                        window.WebApp.close();
+                    } else {
+                        window.history.back();
+                    }
+                });
+            }
+
+            console.log('✅ Мини-приложение загружено');
+            console.log('ID промта:', promptId || 'не найден');
         })();
     </script>
 
